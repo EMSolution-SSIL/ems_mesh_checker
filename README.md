@@ -30,13 +30,14 @@ Python 3.10 or newer is required. The normal installation model is to install
 both projects as Python packages; the two repositories do not need to remain in
 the same parent directory.
 
-After `ems-file-format-converter` 0.6.0 is published to PyPI:
+Install from PyPI. `ems-file-format-converter` 0.6.0 or newer is installed
+automatically as a dependency:
 
 ```powershell
 python -m pip install ems-mesh-checker
 ```
 
-For development before that PyPI release, clone and install both repositories:
+For development of both projects, clone and install both repositories:
 
 ```powershell
 git clone https://github.com/EMSolution-SSIL/ems_file_format_converter.git
