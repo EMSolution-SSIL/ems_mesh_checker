@@ -22,7 +22,7 @@ topology and curve reconstruction to export reusable CAD/mesher input.
 - Report node/element loading progress for large Femap Neutral files.
 
 The current PoC targets linear elements. Higher-order element support is not a
-release goal for version 0.1.0.
+current release goal.
 
 ## Installation
 

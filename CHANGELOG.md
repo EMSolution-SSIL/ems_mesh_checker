@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.1 - 2026-09-10
+
 - Add opt-in removal of small closed feature-edge loops and isolated open
   surface components with a configurable maximum edge count.
 
