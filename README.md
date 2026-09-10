@@ -93,6 +93,20 @@ For repeated independent groups, repeat `--merge-properties`. Run
 `ems-mesh-checker --help` for tolerance, preview, Gmsh validation, and other
 options.
 
+PyVista can occasionally return small triangular or polygonal closed loops as
+feature-edge noise. Remove only loops containing at most 10 edges with the
+opt-in cleanup below; adjust `--max-loop-edges` for the model when needed.
+
+```powershell
+ems-mesh-checker model.neu geometry.dxf `
+  --remove-small-loops `
+  --max-loop-edges 10
+```
+
+This cleanup is disabled by default because a small closed loop can also be a
+real geometric feature. The CLI reports the number of detected loops and
+removed edge segments in its diagnostics.
+
 ## Output formats
 
 - DXF contains point/line/arc-oriented representative geometry for CAD and
@@ -119,7 +133,11 @@ boundaries = BoundaryExtractor(mesh).extract()
 features = extract_property_group_feature_edges(
     boundaries,
     (2, 5),
-    config=FeatureEdgeConfig(feature_angle_degrees=30.0),
+    config=FeatureEdgeConfig(
+        feature_angle_degrees=30.0,
+        remove_small_loops=True,
+        max_loop_edges=10,
+    ),
 )
 ```
 

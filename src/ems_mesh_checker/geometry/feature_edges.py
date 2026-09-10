@@ -29,6 +29,8 @@ class FeatureEdgeConfig:
     ``min_curve_length`` is intentionally zero by default: deleting short
     curves can hide a genuine small geometric feature.  It is an explicit,
     opt-in filter for models where mesh-scale fragments are known to be noise.
+    Likewise, ``remove_small_loops`` is disabled unless the caller explicitly
+    chooses a ``max_loop_edges`` threshold suitable for the model.
     """
 
     feature_angle_degrees: float = 30.0
@@ -38,6 +40,8 @@ class FeatureEdgeConfig:
     manifold_edges: bool = False
     vertex_merge_tolerance: float | None = None
     min_curve_length: float = 0.0
+    remove_small_loops: bool = False
+    max_loop_edges: int = 10
 
     def __post_init__(self) -> None:
         if not 0.0 < self.feature_angle_degrees < 180.0:
@@ -46,6 +50,8 @@ class FeatureEdgeConfig:
             raise ValueError("vertex_merge_tolerance must be non-negative or None")
         if self.min_curve_length < 0.0:
             raise ValueError("min_curve_length must be non-negative")
+        if self.max_loop_edges < 3:
+            raise ValueError("max_loop_edges must be at least 3")
 
 
 @dataclass(frozen=True)
@@ -374,8 +380,22 @@ def _assemble_curves(
     """Join VTK line cells, stopping at branches and preserving closed loops."""
 
     points, segments = _normalized_segments(edge_mesh, config.vertex_merge_tolerance)
+    diagnostics: list[str] = []
+    if config.remove_small_loops:
+        original_segment_count = len(segments)
+        segments, removed_loop_count = _remove_small_closed_loops(
+            segments,
+            max_loop_edges=config.max_loop_edges,
+        )
+        removed_segment_count = original_segment_count - len(segments)
+        if removed_loop_count:
+            diagnostics.append(
+                "feature_edge_small_loops_removed="
+                f"{removed_loop_count}: segments_removed={removed_segment_count}, "
+                f"max_loop_edges={config.max_loop_edges}"
+            )
     if not segments:
-        return (), ()
+        return (), tuple(diagnostics)
     adjacency: dict[int, set[int]] = defaultdict(set)
     for first, second in segments:
         adjacency[first].add(second)
@@ -410,13 +430,48 @@ def _assemble_curves(
                 length=length,
             )
         )
-    diagnostics: list[str] = []
     branch_count = sum(1 for neighbors in adjacency.values() if len(neighbors) > 2)
     if branch_count:
         diagnostics.append(f"feature_edge_branch_points={branch_count}: curves split at branches")
     if dropped:
         diagnostics.append(f"feature_edge_curves_dropped={dropped}: below min_curve_length")
     return tuple(curves), tuple(diagnostics)
+
+
+def _remove_small_closed_loops(
+    segments: set[tuple[int, int]],
+    *,
+    max_loop_edges: int,
+) -> tuple[set[tuple[int, int]], int]:
+    """Remove edges belonging to graph cycles up to a caller-selected size.
+
+    This deliberately mirrors pyemsi's optional feature-edge cleanup.  It is
+    conservative by default because a small closed loop can also be a real
+    geometric detail; callers must explicitly enable it in
+    :class:`FeatureEdgeConfig`.
+    """
+
+    if not segments:
+        return set(), 0
+    try:
+        import networkx as nx
+    except ImportError as error:  # pragma: no cover - packaging dependency
+        raise FeatureEdgeDependencyError(
+            "NetworkX is required when remove_small_loops is enabled"
+        ) from error
+
+    graph = nx.Graph()
+    graph.add_edges_from(segments)
+    edges_to_remove: set[tuple[int, int]] = set()
+    removed_loop_count = 0
+    for cycle in nx.simple_cycles(graph, length_bound=max_loop_edges):
+        if len(cycle) < 3:
+            continue
+        removed_loop_count += 1
+        cycle_nodes = cycle + [cycle[0]]
+        for first, second in zip(cycle_nodes[:-1], cycle_nodes[1:]):
+            edges_to_remove.add(tuple(sorted((int(first), int(second)))))
+    return segments.difference(edges_to_remove), removed_loop_count
 
 
 def _normalized_segments(edge_mesh: Any, tolerance: float | None) -> tuple[np.ndarray, set[tuple[int, int]]]:

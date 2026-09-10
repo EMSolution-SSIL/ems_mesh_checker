@@ -64,6 +64,21 @@ def main() -> None:
         help="discard only curves shorter than this explicit threshold (default: 0)",
     )
     parser.add_argument(
+        "--remove-small-loops",
+        action="store_true",
+        help=(
+            "remove closed feature-edge loops at or below --max-loop-edges; "
+            "opt-in because genuine small features can also be removed"
+        ),
+    )
+    parser.add_argument(
+        "--max-loop-edges",
+        type=int,
+        default=10,
+        metavar="N",
+        help="largest closed feature-edge loop removed by --remove-small-loops (default: 10)",
+    )
+    parser.add_argument(
         "--coplanar-angle",
         type=float,
         default=1.0,
@@ -179,6 +194,8 @@ def main() -> None:
         parser.error("--circle-elements-per-turn must be at least 3")
     if args.progress_interval < 0:
         parser.error("--progress-interval must be non-negative")
+    if args.max_loop_edges < 3:
+        parser.error("--max-loop-edges must be at least 3")
     requested_properties = (
         None
         if not args.properties
@@ -197,6 +214,8 @@ def main() -> None:
     config = FeatureEdgeConfig(
         feature_angle_degrees=args.feature_angle,
         min_curve_length=args.min_curve_length,
+        remove_small_loops=args.remove_small_loops,
+        max_loop_edges=args.max_loop_edges,
     )
     planar_config = PlanarRegionConfig(coplanar_angle_degrees=args.coplanar_angle)
     curve_config = CurveSimplificationConfig(
@@ -268,6 +287,12 @@ def main() -> None:
                 property_group,
                 config=config,
             )
+            for diagnostic in feature_result.diagnostics:
+                if diagnostic.startswith("feature_edge_small_loops_removed="):
+                    print(
+                        f"{case.name}: {_property_group_text(property_group)} {diagnostic}",
+                        flush=True,
+                    )
             degenerate = [
                 diagnostic
                 for diagnostic in feature_result.diagnostics

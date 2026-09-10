@@ -217,3 +217,62 @@ def test_property_group_rejects_missing_property_id() -> None:
 def test_feature_angle_must_be_in_open_range(angle: float) -> None:
     with pytest.raises(ValueError, match="feature_angle_degrees"):
         FeatureEdgeConfig(feature_angle_degrees=angle)
+
+
+def test_small_loop_filter_removes_triangle_and_keeps_attached_open_edge() -> None:
+    surface = meshio.Mesh(
+        points=np.array(
+            [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 2.0]]
+        ),
+        cells=[
+            (
+                "line",
+                np.array([[0, 1], [1, 2], [2, 0], [2, 3]], dtype=int),
+            )
+        ],
+    )
+
+    unfiltered = extract_feature_edges(surface)
+    filtered = extract_feature_edges(
+        surface,
+        config=FeatureEdgeConfig(remove_small_loops=True, max_loop_edges=3),
+    )
+
+    assert unfiltered.edge_count == filtered.edge_count == 4
+    assert sum(curve.segment_count for curve in unfiltered.curves) == 4
+    assert len(filtered.curves) == 1
+    assert not filtered.curves[0].closed
+    assert filtered.curves[0].segment_count == 1
+    assert any(
+        "feature_edge_small_loops_removed=1" in diagnostic
+        and "segments_removed=3" in diagnostic
+        for diagnostic in filtered.diagnostics
+    )
+
+
+def test_small_loop_filter_keeps_cycle_above_edge_threshold() -> None:
+    angle = np.linspace(0.0, 2.0 * np.pi, 6, endpoint=False)
+    surface = meshio.Mesh(
+        points=np.column_stack((np.cos(angle), np.sin(angle))),
+        cells=[
+            (
+                "line",
+                np.array([[index, (index + 1) % 6] for index in range(6)], dtype=int),
+            )
+        ],
+    )
+
+    result = extract_feature_edges(
+        surface,
+        config=FeatureEdgeConfig(remove_small_loops=True, max_loop_edges=5),
+    )
+
+    assert len(result.curves) == 1
+    assert result.curves[0].closed
+    assert result.curves[0].segment_count == 6
+    assert not any("small_loops_removed" in item for item in result.diagnostics)
+
+
+def test_small_loop_edge_threshold_must_be_at_least_three() -> None:
+    with pytest.raises(ValueError, match="max_loop_edges"):
+        FeatureEdgeConfig(remove_small_loops=True, max_loop_edges=2)

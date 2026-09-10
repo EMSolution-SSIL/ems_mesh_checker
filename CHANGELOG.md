@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add opt-in removal of small closed feature-edge loops with a configurable
+  maximum edge count.
+
 ## 0.1.0 - 2026-09-10
 
 - Initial proof-of-concept release.
