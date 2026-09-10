@@ -67,7 +67,8 @@ def main() -> None:
         "--remove-small-loops",
         action="store_true",
         help=(
-            "remove closed feature-edge loops at or below --max-loop-edges; "
+            "remove closed feature-edge loops and isolated open surface components "
+            "at or below --max-loop-edges; "
             "opt-in because genuine small features can also be removed"
         ),
     )
@@ -76,7 +77,7 @@ def main() -> None:
         type=int,
         default=10,
         metavar="N",
-        help="largest closed feature-edge loop removed by --remove-small-loops (default: 10)",
+        help="largest loop/component boundary removed by --remove-small-loops (default: 10)",
     )
     parser.add_argument(
         "--coplanar-angle",
@@ -217,7 +218,11 @@ def main() -> None:
         remove_small_loops=args.remove_small_loops,
         max_loop_edges=args.max_loop_edges,
     )
-    planar_config = PlanarRegionConfig(coplanar_angle_degrees=args.coplanar_angle)
+    planar_config = PlanarRegionConfig(
+        coplanar_angle_degrees=args.coplanar_angle,
+        remove_small_open_components=args.remove_small_loops,
+        max_open_component_edges=args.max_loop_edges,
+    )
     curve_config = CurveSimplificationConfig(
         enabled=not args.no_arc_simplification,
         radial_relative_tolerance=args.arc_relative_tolerance,
@@ -304,6 +309,12 @@ def main() -> None:
                     f"First diagnostic: {degenerate[0]}"
                 )
             planar_result = extract_planar_regions(feature_result, config=planar_config)
+            for diagnostic in planar_result.diagnostics:
+                if diagnostic.startswith("small_open_surface_components_removed="):
+                    print(
+                        f"{case.name}: {_property_group_text(property_group)} {diagnostic}",
+                        flush=True,
+                    )
             if preview_plotter is not None:
                 _add_preview_result(preview_plotter, feature_result)
             raw_edge_count += feature_result.edge_count

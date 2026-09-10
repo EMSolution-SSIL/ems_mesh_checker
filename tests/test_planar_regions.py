@@ -37,6 +37,43 @@ def _cube_mesh() -> meshio.Mesh:
     )
 
 
+def _cube_surface_with_detached_triangle() -> meshio.Mesh:
+    return meshio.Mesh(
+        points=np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+                [1.0, 0.0, 1.0],
+                [1.0, 1.0, 1.0],
+                [0.0, 1.0, 1.0],
+                [3.0, 0.0, 0.0],
+                [3.0, 1.0, 0.0],
+                [3.0, 0.0, 1.0],
+            ]
+        ),
+        cells=[
+            (
+                "quad",
+                np.array(
+                    [
+                        [0, 3, 2, 1],
+                        [4, 5, 6, 7],
+                        [0, 1, 5, 4],
+                        [1, 2, 6, 5],
+                        [2, 3, 7, 6],
+                        [3, 0, 4, 7],
+                    ],
+                    dtype=int,
+                ),
+            ),
+            ("triangle", np.array([[8, 9, 10]], dtype=int)),
+        ],
+    )
+
+
 def test_two_coplanar_quads_merge_and_collinear_boundary_nodes_are_removed() -> None:
     surface = meshio.Mesh(
         points=np.array(
@@ -131,11 +168,53 @@ def test_closed_2d_feature_curve_can_become_a_planar_region() -> None:
         cells=[("line", np.array([[0, 1], [1, 2], [2, 3], [3, 0]], dtype=int))],
     )
 
-    result = extract_planar_regions(extract_feature_edges(surface))
+    result = extract_planar_regions(
+        extract_feature_edges(surface),
+        config=PlanarRegionConfig(
+            remove_small_open_components=True,
+            max_open_component_edges=4,
+        ),
+    )
 
     assert not result.unsupported_regions
     assert len(result.regions) == 1
     np.testing.assert_allclose(np.abs(result.regions[0].normal), [0.0, 0.0, 1.0])
+
+
+def test_small_open_surface_filter_removes_detached_triangle_but_keeps_closed_cube() -> None:
+    features = extract_feature_edges(
+        _cube_surface_with_detached_triangle(),
+        source_kind="property",
+        property_id=1,
+        property_ids=(1,),
+    )
+
+    unfiltered = extract_planar_regions(features)
+    filtered = extract_planar_regions(
+        features,
+        config=PlanarRegionConfig(
+            remove_small_open_components=True,
+            max_open_component_edges=3,
+        ),
+    )
+
+    assert len(unfiltered.regions) == 7
+    assert len(filtered.regions) == 6
+    assert {region.region_index for region in filtered.regions} == set(range(6))
+    assert any(
+        "small_open_surface_components_removed=1" in diagnostic
+        and "boundary_edges=3" in diagnostic
+        and "source_faces=1" in diagnostic
+        for diagnostic in filtered.diagnostics
+    )
+
+
+def test_small_open_surface_edge_threshold_must_be_at_least_three() -> None:
+    with pytest.raises(ValueError, match="max_open_component_edges"):
+        PlanarRegionConfig(
+            remove_small_open_components=True,
+            max_open_component_edges=2,
+        )
 
 
 def test_nonplanar_component_is_reported_instead_of_flattened() -> None:

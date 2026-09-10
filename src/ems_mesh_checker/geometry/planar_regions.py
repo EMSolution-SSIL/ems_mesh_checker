@@ -26,6 +26,8 @@ class PlanarRegionConfig:
     simplify_relative_tolerance: float = 1.0e-8
     validate_pyvista_feature_edges: bool = True
     preserve_neighbor_property_seams: bool = True
+    remove_small_open_components: bool = False
+    max_open_component_edges: int = 10
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.coplanar_angle_degrees < 180.0:
@@ -42,6 +44,8 @@ class PlanarRegionConfig:
                 raise ValueError(f"{name} must be non-negative")
         if self.vertex_match_tolerance is not None and self.vertex_match_tolerance < 0.0:
             raise ValueError("vertex_match_tolerance must be non-negative or None")
+        if self.max_open_component_edges < 3:
+            raise ValueError("max_open_component_edges must be at least 3")
 
 
 @dataclass(frozen=True)
@@ -172,6 +176,16 @@ def extract_planar_regions(
         else:
             assert failure is not None
             unsupported.append(failure)
+
+    if settings.remove_small_open_components:
+        regions, removal_diagnostic = _remove_small_open_surface_components(
+            regions,
+            faces,
+            points,
+            settings,
+        )
+        if removal_diagnostic is not None:
+            diagnostics.append(removal_diagnostic)
 
     return PlanarRegionResult(
         feature_edges=feature_edges,
@@ -346,6 +360,106 @@ def _connected_face_components(adjacency: Mapping[int, set[int]]) -> tuple[tuple
                     queue.append(neighbor)
         components.append(tuple(sorted(component)))
     return tuple(components)
+
+
+def _remove_small_open_surface_components(
+    regions: list[PlanarRegion],
+    source_faces: list[tuple[int, ...]],
+    source_points: np.ndarray,
+    config: PlanarRegionConfig,
+) -> tuple[list[PlanarRegion], str | None]:
+    """Drop isolated, hole-free planar patches with a small outer boundary.
+
+    A single planar region cannot form a closed three-dimensional shell.  The
+    filter therefore removes only one-region surface components and preserves
+    every component whose regions share at least one complete boundary edge.
+    Two-dimensional closed-curve regions have no source-face provenance and
+    are deliberately outside the scope of this cleanup.
+    """
+
+    if not regions:
+        return regions, None
+    tolerance = (
+        _scale_tolerance(source_points, 1.0e-8, 1.0e-10)
+        if config.vertex_match_tolerance is None
+        else config.vertex_match_tolerance
+    )
+    lookup = _PointLookup(source_points, tolerance)
+    adjacency: dict[int, set[int]] = {index: set() for index in range(len(regions))}
+    edge_owners: dict[tuple[int, int], set[int]] = defaultdict(set)
+    region_edges: list[set[tuple[int, int]]] = []
+    unmatched_regions: set[int] = set()
+    for region_index, region in enumerate(regions):
+        edges: set[tuple[int, int]] = set()
+        for loop in (region.outer_loop, *region.hole_loops):
+            loop_points = np.asarray(loop.points, dtype=float)
+            for index, first in enumerate(loop_points):
+                second = loop_points[(index + 1) % len(loop_points)]
+                first_id = lookup.find(first)
+                second_id = lookup.find(second)
+                if first_id is None or second_id is None:
+                    unmatched_regions.add(region_index)
+                    continue
+                if first_id != second_id:
+                    edges.add(tuple(sorted((first_id, second_id))))
+        region_edges.append(edges)
+        for edge in edges:
+            edge_owners[edge].add(region_index)
+
+    for owners in edge_owners.values():
+        ordered = sorted(owners)
+        for index, first in enumerate(ordered):
+            for second in ordered[index + 1 :]:
+                adjacency[first].add(second)
+                adjacency[second].add(first)
+
+    face_to_region = {
+        face_index: region_index
+        for region_index, region in enumerate(regions)
+        for face_index in region.source_face_indices
+    }
+    source_edge_owners: dict[tuple[int, int], set[int]] = defaultdict(set)
+    for face_index, region_index in face_to_region.items():
+        for edge in _face_edges(source_faces[face_index]):
+            source_edge_owners[edge].add(region_index)
+    for owners in source_edge_owners.values():
+        ordered = sorted(owners)
+        for index, first in enumerate(ordered):
+            for second in ordered[index + 1 :]:
+                adjacency[first].add(second)
+                adjacency[second].add(first)
+
+    removed: set[int] = set()
+    removed_boundary_edges = 0
+    removed_source_faces = 0
+    for component in _connected_face_components(adjacency):
+        if len(component) != 1:
+            continue
+        region_index = component[0]
+        region = regions[region_index]
+        boundary_edge_count = len(region.outer_loop.points)
+        if (
+            region_index in unmatched_regions
+            or not region.source_face_indices
+            or region.hole_loops
+            or boundary_edge_count < 3
+            or boundary_edge_count > config.max_open_component_edges
+        ):
+            continue
+        removed.add(region_index)
+        removed_boundary_edges += boundary_edge_count
+        removed_source_faces += len(region.source_face_indices)
+
+    if not removed:
+        return regions, None
+    kept = [region for index, region in enumerate(regions) if index not in removed]
+    diagnostic = (
+        f"small_open_surface_components_removed={len(removed)}: "
+        f"boundary_edges={removed_boundary_edges}, "
+        f"source_faces={removed_source_faces}, "
+        f"max_open_component_edges={config.max_open_component_edges}"
+    )
+    return kept, diagnostic
 
 
 def _component_boundary_loops(

@@ -93,9 +93,10 @@ For repeated independent groups, repeat `--merge-properties`. Run
 `ems-mesh-checker --help` for tolerance, preview, Gmsh validation, and other
 options.
 
-PyVista can occasionally return small triangular or polygonal closed loops as
-feature-edge noise. Remove only loops containing at most 10 edges with the
-opt-in cleanup below; adjust `--max-loop-edges` for the model when needed.
+PyVista can occasionally return small triangular or polygonal feature-edge
+noise. The opt-in cleanup below removes closed edge loops and isolated open
+surface components whose boundary contains at most 10 edges; adjust
+`--max-loop-edges` for the model when needed.
 
 ```powershell
 ems-mesh-checker model.neu geometry.dxf `
@@ -103,9 +104,10 @@ ems-mesh-checker model.neu geometry.dxf `
   --max-loop-edges 10
 ```
 
-This cleanup is disabled by default because a small closed loop can also be a
-real geometric feature. The CLI reports the number of detected loops and
-removed edge segments in its diagnostics.
+This cleanup is disabled by default because a small loop or open surface can
+also be a real geometric feature. Closed and multi-surface components are kept,
+as are 2-D closed regions. The CLI reports both removed edge loops and removed
+open surface components in its diagnostics.
 
 ## Output formats
 
