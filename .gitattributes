@@ -1,0 +1,3 @@
+# Preserve fixed-width mesh samples byte-for-byte and avoid enormous text diffs.
+*.atl -diff -text
+*.neu -diff -text

@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ems-mesh-checker"
+version = "0.1.0"
+description = "Mesh topology checks and representative property geometry extraction for EMSolution meshes"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Hiroyuki Kaimori"}]
+keywords = ["finite-element", "mesh", "EMSolution", "Gmsh", "Femap"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "ems-file-format-converter>=0.6.0",
+    "ezdxf>=1.0",
+    "meshio>=5.0",
+    "numpy>=1.24",
+    "pyvista>=0.43",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+dev = ["build>=1.2", "pytest>=7.0", "twine>=5.0"]
+
+[project.scripts]
+ems-mesh-checker = "ems_mesh_checker.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/EMSolution-SSIL/ems_mesh_checker"
+Repository = "https://github.com/EMSolution-SSIL/ems_mesh_checker"
+Issues = "https://github.com/EMSolution-SSIL/ems_mesh_checker/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["ems_mesh_checker*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -m 'not slow'"
+markers = [
+    "slow: uses a larger public sample mesh",
+]

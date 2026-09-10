@@ -1,0 +1,6 @@
+ems-file-format-converter>=0.6.0
+ezdxf>=1.0
+meshio>=5.0
+numpy>=1.24
+pyvista>=0.43
+pytest>=7.0

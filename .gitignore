@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+build/
+dist/
+generated/
+*.dxf
+*.geo
+*.msh
+*.png
+
+# Mesh fixtures are private by default. Only the reviewed public samples below
+# may be committed.
+data/**
+!data/3D/
+data/3D/**
+!data/3D/IronCoil/
+!data/3D/IronCoil/post_geom.atl
+!data/3D/QuadTri/
+!data/3D/QuadTri/post_geom.neu
