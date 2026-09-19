@@ -162,3 +162,7 @@ python -m pytest -q
 ## License
 
 MIT License. Copyright (c) 2026 Hiroyuki Kaimori. See `LICENSE`.
+
+## 日本語版
+
+日本語版は [`README_ja.md`](README_ja.md) を参照してください。
