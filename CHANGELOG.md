@@ -17,6 +17,8 @@
   solids in one STEP assembly alongside the per-Property files.
 - Make the representative geometry dependencies part of the standard install
   and raise the minimum Python version to 3.11.
+- Document individual and combined STEP output in the English and Japanese
+  READMEs and the repository skill.
 
 ## 0.1.1 - 2026-09-10
 
