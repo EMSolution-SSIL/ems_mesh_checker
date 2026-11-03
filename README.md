@@ -539,3 +539,11 @@ edits to the older representative GEO/DXF files, changed contact topology,
 large deformation, and automatic remeshing remain outside this workflow. Small
 synthetic tests have passed; real production meshes and large-model performance
 still require validation.
+
+## License
+
+MIT License. Copyright (c) 2026 Hiroyuki Kaimori. See `LICENSE`.
+
+## 日本語版
+
+日本語版は [`README_ja.md`](README_ja.md) を参照してください。
