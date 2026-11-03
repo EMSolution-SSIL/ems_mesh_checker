@@ -14,6 +14,13 @@ from .femap_neutral import (
     write_planar_regions_femap_neutral,
 )
 from .representative_geo import RepresentativeGeometryExportError, write_planar_regions_geo
+from .representative_step import (
+    StepAssemblyResult,
+    StepExportError,
+    StepExportResult,
+    write_planar_regions_step,
+    write_step_assembly,
+)
 from .volume_topology import (
     ClosedSurfaceShell,
     OpenSurfaceComponent,
@@ -29,6 +36,9 @@ __all__ = [
     "ClosedSurfaceShell",
     "OpenSurfaceComponent",
     "RepresentativeGeometryExportError",
+    "StepExportError",
+    "StepExportResult",
+    "StepAssemblyResult",
     "SurfaceTopologyRecord",
     "VolumeTopologyConfig",
     "VolumeTopologyResult",
@@ -41,4 +51,6 @@ __all__ = [
     "write_planar_regions_dxf",
     "write_planar_regions_femap_neutral",
     "write_planar_regions_geo",
+    "write_planar_regions_step",
+    "write_step_assembly",
 ]

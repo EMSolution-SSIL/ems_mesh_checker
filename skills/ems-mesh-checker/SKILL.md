@@ -1,6 +1,6 @@
 ---
 name: ems-mesh-checker
-description: Extract and validate representative Property-boundary geometry from EMSolution meshes, including Property selection, feature-edge cleanup, DXF/GEO/Femap export, and Gmsh checks.
+description: Extract and validate representative Property-boundary geometry from EMSolution meshes, including Property selection, feature-edge cleanup, DXF/GEO/Femap/STEP export, and Gmsh checks.
 ---
 
 # EMS Mesh Checker
@@ -13,8 +13,8 @@ surface.
 
 ## Prerequisites
 
-The package requires Python 3.10 or newer and installs
-`ems-file-format-converter>=0.6.0`, PyVista/VTK, meshio, ezdxf, and networkx.
+Version 0.2.0 requires Python 3.11 or newer and installs
+`ems-file-format-converter>=0.6.0`, PyVista/VTK, CadQuery, meshio, ezdxf, and networkx.
 For local development, the converter may instead be installed editable from
 its sibling repository. Gmsh is optional but should be used to validate GEO
 when available.
@@ -65,6 +65,21 @@ when available.
    Add `--gmsh-executable path\to\gmsh.exe` to let the CLI perform this check;
    add `--gmsh-mesh-dimension 2` or `3` to generate a validation mesh. DXF is
    curve-oriented and does not contain GEO `Surface`/`Volume` entities.
+7. For 3-D CAD solids, request STEP explicitly and supply the unit of the
+   input coordinates. The CLI still writes DXF, GEO, and Femap Neutral files.
+
+   ```powershell
+   ems-mesh-checker data\3D\IronCoil\post_geom.atl generated\ironcoil.dxf `
+     --properties 3,4 --step --step-unit MM --step-combined
+   ```
+
+   This writes `ironcoil_P3.step` and `ironcoil_P4.step`, plus
+   `ironcoil_ALL.step` containing both named, independent Property solids.
+   Without `--step-combined`, only the individual STEP files are written.
+   `--merge-properties` changes the extraction by omitting mutual interfaces;
+   `--step-combined` only packages selected solids together and does not fuse
+   them. STEP export rejects unsupported or open shells. Reopen the file in
+   CadQuery or a CAD viewer and confirm the expected Property shapes and units.
 
 ## Interpreting results
 
@@ -73,6 +88,8 @@ when available.
 - Remaining `unsupported_regions`, `open_shells`, or cleanup diagnostics are
   evidence to inspect, not automatic failures. Do not flatten a non-planar,
   branched, or self-inconsistent component into a planar surface.
+- A successful GEO/DXF export does not guarantee a closed STEP Solid. If STEP
+  fails, inspect unsupported regions and open shells before adjusting filters.
 - If a boundary disappears unexpectedly, rerun without cleanup options, then
   compare `--properties`, `--exclude-properties`, `--merge-properties`, and
   `--suppress-quad-tri-interfaces` independently.

@@ -8,6 +8,9 @@ from .export import (
     FemapNeutralGeometryExportError,
     OpenSurfaceComponent,
     RepresentativeGeometryExportError,
+    StepExportError,
+    StepExportResult,
+    StepAssemblyResult,
     SurfaceTopologyRecord,
     VolumeTopologyConfig,
     VolumeTopologyResult,
@@ -20,6 +23,8 @@ from .export import (
     write_planar_regions_dxf,
     write_planar_regions_femap_neutral,
     write_planar_regions_geo,
+    write_planar_regions_step,
+    write_step_assembly,
 )
 from .geometry import (
     CircularArcPrimitive,
@@ -105,4 +110,9 @@ __all__ = [
     "write_planar_regions_dxf",
     "write_planar_regions_femap_neutral",
     "write_planar_regions_geo",
+    "write_planar_regions_step",
+    "StepExportError",
+    "StepExportResult",
+    "StepAssemblyResult",
+    "write_step_assembly",
 ]
