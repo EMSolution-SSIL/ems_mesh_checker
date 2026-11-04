@@ -31,3 +31,10 @@ jobs:
         run: python -m build
       - name: Validate distributions
         run: python -m twine check dist/*
+      - name: Upload wheel and source distribution
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/*
+          if-no-files-found: error
