@@ -32,7 +32,7 @@ package under `src/ems_mesh_checker` and its tests.
 
 Only the reviewed public samples in `data/3D/IronCoil` and `data/3D/QuadTri`
 may be committed. AGC, J, and other customer or internal model data must stay
-local. Generated DXF, GEO, Femap Neutral, preview, and mesh files should not
+local. Generated DXF, GEO, STEP, Femap Neutral, preview, and mesh files should not
 be committed.
 
 ## Validation

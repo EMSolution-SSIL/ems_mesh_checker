@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ems-mesh-checker"
-version = "0.1.1"
+version = "0.2.0"
 description = "Mesh topology checks and representative property geometry extraction for EMSolution meshes"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 authors = [{name = "Hiroyuki Kaimori"}]
-keywords = ["finite-element", "mesh", "EMSolution", "Gmsh", "Femap"]
+keywords = ["finite-element", "mesh", "EMSolution", "Gmsh", "Femap", "STEP"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
@@ -18,6 +18,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+    "cadquery>=2.8,<3",
     "ems-file-format-converter>=0.6.0",
     "ezdxf>=1.0",
     "meshio>=5.0",
@@ -25,10 +26,6 @@ dependencies = [
     "numpy>=1.24",
     "pyvista>=0.43",
 ]
-
-[project.optional-dependencies]
-test = ["pytest>=7.0"]
-dev = ["build>=1.2", "pytest>=7.0", "twine>=5.0"]
 
 [project.scripts]
 ems-mesh-checker = "ems_mesh_checker.cli:main"
@@ -38,6 +35,14 @@ Homepage = "https://github.com/EMSolution-SSIL/ems_mesh_checker"
 Repository = "https://github.com/EMSolution-SSIL/ems_mesh_checker"
 Issues = "https://github.com/EMSolution-SSIL/ems_mesh_checker/issues"
 
+[project.optional-dependencies]
+test = ["pytest>=7.0", "ezdxf>=1.0"]
+dev = ["pytest>=7.0", "build>=1.0", "twine>=5.0"]
+converter = ["ems-file-format-converter"]
+dxf = ["ezdxf>=1.0"]
+geometry = ["networkx>=3.0", "pyvista>=0.43"]
+morph = ["ems-mesh-morpher>=0.12,<0.14", "ems-file-format-converter>=0.6.0"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["ems_mesh_checker*"]
@@ -46,5 +51,5 @@ include = ["ems_mesh_checker*"]
 testpaths = ["tests"]
 addopts = "-ra -m 'not slow'"
 markers = [
-    "slow: uses a larger public sample mesh",
+    "slow: uses the large AGC production-style fixture",
 ]

@@ -1,7 +1,13 @@
-ems-file-format-converter>=0.6.0
-ezdxf>=1.0
+# Third-party packages for the full MeshChecker development environment.
+# The project itself is installed separately with: python -m pip install -e .
 meshio>=5.0
 networkx>=3.0
 numpy>=1.24
+ezdxf>=1.0
 pyvista>=0.43
+cadquery>=2.8,<3
+ems-file-format-converter>=0.6.0
 pytest>=7.0
+
+# For local converter development, install the sibling checkout with
+# python -m pip install -e ..\ems_file_format_converter

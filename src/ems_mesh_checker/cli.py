@@ -22,9 +22,12 @@ from ems_mesh_checker import (
     extract_property_group_feature_edges,
 )
 from ems_mesh_checker.export import (
+    StepExportError,
     write_planar_regions_dxf,
     write_planar_regions_femap_neutral,
     write_planar_regions_geo,
+    write_planar_regions_step,
+    write_step_assembly,
 )
 
 
@@ -142,6 +145,22 @@ def main() -> None:
         action="store_true",
         help="do not assemble closed Property surfaces into Surface Loops and Volumes",
     )
+    parser.add_argument(
+        "--step",
+        action="store_true",
+        help="also write validated Property solids as one STEP file per Property group",
+    )
+    parser.add_argument(
+        "--step-unit",
+        choices=("MM", "CM", "M", "KM", "INCH", "FT", "MI", "UM", "NM"),
+        type=str.upper,
+        help="length unit of input coordinates and STEP output; required with --step",
+    )
+    parser.add_argument(
+        "--step-combined",
+        action="store_true",
+        help="also write one named STEP assembly containing all selected Property solids",
+    )
     property_selection = parser.add_mutually_exclusive_group()
     property_selection.add_argument(
         "--properties",
@@ -197,6 +216,14 @@ def main() -> None:
         parser.error("--progress-interval must be non-negative")
     if args.max_loop_edges < 3:
         parser.error("--max-loop-edges must be at least 3")
+    if args.step and args.step_unit is None:
+        parser.error("--step requires --step-unit")
+    if args.step_unit is not None and not args.step:
+        parser.error("--step-unit requires --step")
+    if args.step and args.no_volumes:
+        parser.error("--step cannot be combined with --no-volumes")
+    if args.step_combined and not args.step:
+        parser.error("--step-combined requires --step")
     requested_properties = (
         None
         if not args.properties
@@ -358,6 +385,39 @@ def main() -> None:
             volume_topology_config=volume_topology_config,
             circle_elements_per_turn=args.circle_elements_per_turn,
         )
+        step_paths = []
+        step_exports = []
+        if args.step:
+            for index, planar_result in enumerate(planar_results, start=1):
+                label = "_".join(f"P{property_id}" for property_id in property_groups[index - 1])
+                step_path = case.output_path.with_name(f"{case.output_path.stem}_{label}.step")
+                try:
+                    exported = write_planar_regions_step(
+                        planar_result,
+                        step_path,
+                        unit=args.step_unit,
+                        curve_config=curve_config,
+                        ruled_surface_config=ruled_surface_config,
+                        volume_topology_config=volume_topology_config,
+                    )
+                except StepExportError as error:
+                    raise RuntimeError(f"STEP export failed for {label}: {error}") from error
+                step_paths.append(exported.path)
+                step_exports.append(exported)
+                print(f"{case.name}: representative_step={exported.path}, solids={exported.solid_count}, faces={exported.face_count}", flush=True)
+        combined_step_path = None
+        if args.step_combined:
+            combined = write_step_assembly(
+                step_exports,
+                case.output_path.with_name(f"{case.output_path.stem}_ALL.step"),
+                unit=args.step_unit,
+            )
+            combined_step_path = combined.path
+            print(
+                f"{case.name}: combined_step={combined.path}, "
+                f"properties={combined.property_count}, solids={combined.solid_count}",
+                flush=True,
+            )
         gmsh_mesh_path = None
         if args.gmsh_executable is not None:
             if args.gmsh_mesh_dimension is None:
@@ -398,6 +458,8 @@ def main() -> None:
             f"open_shells={open_shell_count}"
             + (f"\n  gmsh_mesh={gmsh_mesh_path}" if gmsh_mesh_path is not None else "")
             + (f"\n  preview={preview_path}" if preview_path is not None else "")
+            + (f"\n  step_files={len(step_paths)}, step_unit={args.step_unit}" if args.step else "")
+            + (f"\n  combined_step={combined_step_path}" if combined_step_path is not None else "")
         , flush=True)
 
 

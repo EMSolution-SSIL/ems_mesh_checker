@@ -1,3 +1,4 @@
+# Local development environment; never commit installed packages.
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -6,10 +7,13 @@ __pycache__/
 build/
 dist/
 generated/
+private_native/
 *.dxf
 *.geo
 *.msh
 *.png
+*.step
+*.stp
 
 # Mesh fixtures are private by default. Only the reviewed public samples below
 # may be committed.

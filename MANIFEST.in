@@ -1,0 +1,2 @@
+include README_ja.md CHANGELOG.md CONTRIBUTING.md AGENTS.md
+recursive-include skills *.md
