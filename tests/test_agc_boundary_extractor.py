@@ -21,8 +21,11 @@ def _post_geometry_fixture() -> Path:
 
 
 def test_agc_extruded_geometry_classifies_every_shared_hexahedron_face() -> None:
+    sample = _post_geometry_fixture()
+    if not sample.is_file():
+        pytest.skip("private AGC fixture is not available")
     converter = pytest.importorskip("ems_file_format_converter")
-    mesh = converter.read_mesh(_post_geometry_fixture())
+    mesh = converter.read_mesh(sample)
 
     result = BoundaryExtractor(mesh).extract()
 
